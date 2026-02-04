@@ -5,7 +5,7 @@ OUT = build/processor.wasm
 
 # Emscripten flags
 # Note: Ensure these match the functions you've defined in extern "C"
-FLAGS = -s EXPORTED_FUNCTIONS="['_create_crusher','_process_crusher','_set_amount']" \
+FLAGS = -s EXPORTED_FUNCTIONS="['_create_kernel','_process_audio','_set_amount']" \
         -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" \
         -s ALLOW_MEMORY_GROWTH=1 \
         --no-entry

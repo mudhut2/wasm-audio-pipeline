@@ -1,4 +1,4 @@
-class BitcrusherProcessor extends AudioWorkletProcessor {
+class AudioKernelProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
         this.instance = null;
@@ -10,7 +10,7 @@ class BitcrusherProcessor extends AudioWorkletProcessor {
         WebAssembly.instantiate(wasmBytes).then(result => {
             this.instance = result.instance;
             this.heap = new Float32Array(this.instance.exports.memory.buffer);
-            this.cppInstancePtr = this.instance.exports.create_crusher();
+            this.cppInstancePtr = this.instance.exports.create_kernel();
         });
 
         this.port.onmessage = (e) => {
@@ -41,24 +41,24 @@ class BitcrusherProcessor extends AudioWorkletProcessor {
         // 1. Copy Mic data to WASM memory
         this.heap.set(input, inPtr / 4);
 
-        // 2. Run C++ Bitcrusher
-        this.instance.exports.process_crusher(
+        // 2. Run C++ 
+        this.instance.exports.process_audio(
             this.cppInstancePtr,
             inPtr,
             outPtr,
             numFrames
         );
 
-        // 3. Get the "crushed" data back
-        const crushedData = this.heap.subarray(outPtr / 4, (outPtr / 4) + numFrames);
+        // 3. Get the audio data back
+        const audioData = this.heap.subarray(outPtr / 4, (outPtr / 4) + numFrames);
 
-        // 4. Mirror to BOTH channels (Fixes the left/right ear issue)
+        // 4. Mirror to both channels for stereo audio
         for (let channel = 0; channel < outputChannels.length; channel++) {
-            outputChannels[channel].set(crushedData);
+            outputChannels[channel].set(audioData);
         }
 
         return true;
     }
 }
 
-registerProcessor('bitcrusher-processor', BitcrusherProcessor);
+registerProcessor('audio-processor', AudioKernelProcessor);

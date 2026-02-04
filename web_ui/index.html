@@ -1,61 +1,62 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <title>Audio Host: Generic Processor</title>
+    </head>
     <body>
-        <h1>Middleware Test: Bitcrusher</h1>
-        <button id="start">Start Audio</button>
-        <input type="range" id="amount" min="0.001" max="0.5" step="0.01" value="0.1">
+        <h1>Middleware Host: AudioKernel</h1>
+        <button id="start">Start Engine</button>
+        <label for="param">Parameter:</label>
+        <input type="range" id="param" min="0" max="1" step="0.01" value="0.5">
 
         <script type="module">
-
             const startBtn = document.getElementById('start');
-    const amountSlider = document.getElementById('amount');
+            const paramSlider = document.getElementById('param');
 
-    startBtn.onclick = async () => {
-    // 1. Initialize Context
-        const context = new AudioContext();
+            startBtn.onclick = async () => {
+                const context = new AudioContext();
+                await context.resume(); 
 
-    // CRITICAL: Browsers block audio until this is called inside a click handler
-        await context.resume(); 
+                try {
+                    // 1. Load the "Instruction Manual" (JS Worklet)
+                    await context.audioWorklet.addModule('worklet-processor.js');
 
-        try {
-        // 2. Load the Worklet file
-            await context.audioWorklet.addModule('worklet-processor.js');
+                    // 2. Fetch the "Worker's Brain" (WASM)
+                    // Note: Ensure the path matches your terminal: '../build/processor.wasm'
+                    const response = await fetch('../build/processor.wasm');
+                    const wasmBytes = await response.arrayBuffer();
 
-        // 3. Fetch the WASM binary
-            const response = await fetch('../build/processor.wasm');
-            const wasmBytes = await response.arrayBuffer();
+                    // 3. Hire the Worker (Consistent naming with registerProcessor)
+                    const audioNode = new AudioWorkletNode(context, 'audio-processor', {
+                        numberOfInputs: 1,
+                        numberOfOutputs: 1,
+                        channelCount: 1,
+                        processorOptions: { wasmBytes: wasmBytes }
+                    });
 
-        // 4. Create the Node with a FULL options object
-        // The TypeError usually happens here if the structure isn't perfect
-            const bitcrusherNode = new AudioWorkletNode(context, 'bitcrusher-processor', {
-                numberOfInputs: 1,
-                numberOfOutputs: 1,
-                channelCount: 1,
-                processorOptions: { 
-                    wasmBytes: wasmBytes 
+                    // 4. Handle parameter changes
+                    paramSlider.oninput = () => {
+                        audioNode.port.postMessage({ 
+                            type: 'SET_PARAMETER', 
+                            value: parseFloat(paramSlider.value) 
+                        });
+                    };
+
+                    // 5. Connect the signal chain
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const source = context.createMediaStreamSource(stream);
+
+                    // Mic -> Our WASM Engine -> Speakers
+                    source.connect(audioNode).connect(context.destination);
+
+                    console.log("Audio Engine Active at http://localhost:8080");
+                    startBtn.disabled = true;
+                    startBtn.innerText = "Engine Running...";
+
+                } catch (err) {
+                    console.error("Host initialization failed:", err);
                 }
-            });
-
-        // 5. Handle slider changes
-            amountSlider.oninput = () => {
-                bitcrusherNode.port.postMessage({ 
-                    type: 'SET_AMOUNT', 
-                    value: parseFloat(amountSlider.value) 
-                });
-            };
-
-        // 6. Connect the hardware
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const source = context.createMediaStreamSource(stream);
-
-            source.connect(bitcrusherNode).connect(context.destination);
-
-            console.log("Audio pipeline active!");
-
-        } catch (err) {
-            console.error("Pipeline failed:", err);
-        }
-    };  
+            };  
         </script>
     </body>
 </html>
