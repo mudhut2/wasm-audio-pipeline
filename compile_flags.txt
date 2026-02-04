@@ -1,0 +1,6 @@
+-I/home/harrison/tools/emsdk/upstream/emscripten/cache/sysroot/include/c++/v1
+-I/home/harrison/tools/emsdk/upstream/emscripten/cache/sysroot/include
+-I/home/harrison/tools/emsdk/upstream/lib/clang/19/include
+-std=c++17
+--target=wasm32
+-DEMSCRIPTEN

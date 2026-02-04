@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>Middleware Test: Bitcrusher</h1>
+        <button id="start">Start Audio</button>
+        <input type="range" id="amount" min="0.001" max="0.5" step="0.01" value="0.1">
+
+        <script type="module">
+
+            const startBtn = document.getElementById('start');
+    const amountSlider = document.getElementById('amount');
+
+    startBtn.onclick = async () => {
+    // 1. Initialize Context
+        const context = new AudioContext();
+
+    // CRITICAL: Browsers block audio until this is called inside a click handler
+        await context.resume(); 
+
+        try {
+        // 2. Load the Worklet file
+            await context.audioWorklet.addModule('worklet-processor.js');
+
+        // 3. Fetch the WASM binary
+            const response = await fetch('../build/processor.wasm');
+            const wasmBytes = await response.arrayBuffer();
+
+        // 4. Create the Node with a FULL options object
+        // The TypeError usually happens here if the structure isn't perfect
+            const bitcrusherNode = new AudioWorkletNode(context, 'bitcrusher-processor', {
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                channelCount: 1,
+                processorOptions: { 
+                    wasmBytes: wasmBytes 
+                }
+            });
+
+        // 5. Handle slider changes
+            amountSlider.oninput = () => {
+                bitcrusherNode.port.postMessage({ 
+                    type: 'SET_AMOUNT', 
+                    value: parseFloat(amountSlider.value) 
+                });
+            };
+
+        // 6. Connect the hardware
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = context.createMediaStreamSource(stream);
+
+            source.connect(bitcrusherNode).connect(context.destination);
+
+            console.log("Audio pipeline active!");
+
+        } catch (err) {
+            console.error("Pipeline failed:", err);
+        }
+    };  
+        </script>
+    </body>
+</html>
