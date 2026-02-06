@@ -34,6 +34,31 @@
                         processorOptions: { wasmBytes: wasmBytes }
                     });
 
+                    // Define the high-performance constraints
+                    const constraints = {
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            latency: 0 
+                        }
+                    };
+
+                    try {
+                        // 2. Request the stream with these specific rules
+                        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                        // 3. Plug the high-speed stream into the context
+                        const source = context.createMediaStreamSource(stream);
+
+                        // Connect to your WASM node
+                        source.connect(audioNode).connect(context.destination);
+
+                        console.log("Low-latency stream active");
+                    } catch (err) {
+                        console.error("Microphone access denied or constraints not supported:", err);
+                    }
+
                     // 4. Handle parameter changes
                     paramSlider.oninput = () => {
                         audioNode.port.postMessage({ 

@@ -13,10 +13,10 @@ class AudioKernelProcessor extends AudioWorkletProcessor {
             this.cppInstancePtr = this.instance.exports.create_kernel();
         });
 
-        this.port.onmessage = (e) => {
-            if (e.data.type === 'SET_AMOUNT' && this.instance) {
-                this.instance.exports.set_amount(this.cppInstancePtr, parseFloat(e.data.value));
-            }
+        this.port.onmessage = (event) => {
+            const { id, value } = event.data;
+
+            this.wasmModule._set_parameter(this.kernelPtr, id, value);
         };
     }
 
@@ -58,6 +58,14 @@ class AudioKernelProcessor extends AudioWorkletProcessor {
         }
 
         return true;
+    }
+
+    disconnectedCallback() {
+        if (this.instance && this.cppInstancePtr) {
+            console.log("Cleaning up C++ memory...");
+            this.instance.destroy_kernel(this.cppInstancePtr);
+            this.cppInstancePtr = null;
+        }
     }
 }
 
