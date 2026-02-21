@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AudioKernel — Test Bench</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg:#0a0a0a; --surface:#111111; --border:#222222;
+        --accent:#00ff88; --accent2:#ff3c6e; --dim:#444;
+        --text:#e8e8e8; --muted:#666;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; min-height:100vh; display:grid; grid-template-rows:auto 1fr auto; padding:40px 32px; gap:40px; }
+    header { display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--border); padding-bottom:24px; }
+    h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:2rem; letter-spacing:-0.03em; color:#fff; }
+    .tag { font-size:0.7rem; color:var(--accent); border:1px solid var(--accent); padding:2px 8px; letter-spacing:0.12em; text-transform:uppercase; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-content:start; }
+    .card { background:var(--surface); border:1px solid var(--border); padding:24px; }
+    .card.wide { grid-column:1/-1; }
+    .card-label { font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:20px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex-shrink:0; transition:background 0.3s; }
+    .dot.active { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+    .dot.error  { background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
+    .dot.pulse  { animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .status-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    #status-text { font-size:0.8rem; color:var(--muted); }
+    .btn { font-family:'DM Mono',monospace; font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; background:transparent; border:1px solid var(--border); color:var(--text); padding:10px 20px; cursor:pointer; transition:border-color 0.2s,color 0.2s; }
+    .btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+    .btn.danger:hover { border-color:var(--accent2); color:var(--accent2); }
+    .btn:disabled { opacity:0.3; cursor:not-allowed; }
+    .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .mode-row { display:flex; margin-top:16px; }
+    .mode-btn { font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; background:transparent; border:1px solid var(--border); color:var(--muted); padding:8px 16px; cursor:pointer; transition:all 0.2s; margin-right:-1px; }
+    .mode-btn.selected { background:var(--accent); color:#000; border-color:var(--accent); z-index:1; }
+    .param-row { display:flex; align-items:center; gap:16px; margin-top:16px; }
+    .param-label { font-size:0.7rem; color:var(--muted); width:80px; flex-shrink:0; }
+    input[type=range] { -webkit-appearance:none; flex:1; height:2px; background:var(--border); outline:none; cursor:pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:var(--accent); border-radius:0; cursor:pointer; }
+    .param-value { font-size:0.8rem; color:var(--accent); width:36px; text-align:right; flex-shrink:0; }
+    canvas { width:100%; height:80px; display:block; margin-top:16px; }
+    #log { font-size:0.72rem; line-height:1.8; color:var(--muted); height:160px; overflow-y:auto; margin-top:8px; }
+    #log .entry { display:flex; gap:12px; }
+    #log .ts  { color:var(--dim); flex-shrink:0; }
+    #log .msg.ok   { color:var(--accent); }
+    #log .msg.err  { color:var(--accent2); }
+    #log .msg.info { color:#888; }
+    .big-num { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:var(--accent); line-height:1; }
+    .sub { font-size:0.65rem; color:var(--muted); margin-top:6px; letter-spacing:0.1em; text-transform:uppercase; }
+    footer { border-top:1px solid var(--border); padding-top:16px; font-size:0.65rem; color:var(--dim); }
+</style>
+</head>
+<body>
+<header>
+    <h1>AudioKernel</h1>
+    <span class="tag">Test Bench</span>
+</header>
+<main class="grid">
+    <div class="card">
+        <div class="card-label">Pipeline Status</div>
+        <div class="status-row">
+            <div class="dot" id="dot-mic"></div>
+            <span id="status-text">Idle — click Start</span>
+        </div>
+        <div class="btn-row" style="margin-top:20px">
+            <button class="btn" id="btn-start">Start</button>
+            <button class="btn danger" id="btn-stop" disabled>Stop</button>
+        </div>
+        <div style="margin-top:24px" class="card-label">Mode</div>
+        <div class="mode-row">
+            <button class="mode-btn selected" data-mode="passthrough">Passthrough</button>
+            <button class="mode-btn" data-mode="accumulate">Accumulate</button>
+            <button class="mode-btn" data-mode="both">Both</button>
+        </div>
+        <div class="param-row" style="margin-top:24px">
+            <span class="param-label">Gain</span>
+            <input type="range" id="gain" min="0" max="2" step="0.01" value="1">
+            <span class="param-value" id="gain-val">1.00</span>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-label">Accumulator</div>
+        <div class="big-num" id="chunk-count">0</div>
+        <div class="sub">chunks received</div>
+        <div class="param-row" style="margin-top:24px">
+            <span class="param-label">Chunk ms</span>
+            <input type="range" id="chunk-dur" min="50" max="1000" step="50" value="250">
+            <span class="param-value" id="chunk-dur-val">250</span>
+        </div>
+        <div style="margin-top:16px;font-size:0.7rem;color:var(--muted)">
+            Last chunk RMS: <span id="rms-val" style="color:var(--accent)">-</span>
+        </div>
+    </div>
+    <div class="card wide">
+        <div class="card-label">Output Waveform</div>
+        <canvas id="waveform"></canvas>
+    </div>
+    <div class="card wide">
+        <div class="card-label">Event Log</div>
+        <div id="log"></div>
+    </div>
+</main>
+<footer>Place index.html + audio-kernel.worklet.js + audio-kernel.wasm in one folder, then: npx serve .</footer>
+<script>
+const logEl=document.getElementById('log'),dotMic=document.getElementById('dot-mic'),statusText=document.getElementById('status-text'),btnStart=document.getElementById('btn-start'),btnStop=document.getElementById('btn-stop'),chunkEl=document.getElementById('chunk-count'),rmsEl=document.getElementById('rms-val');
+let audioCtx=null,workletNode=null,analyser=null,stream=null,animFrame=null,chunkCount=0,currentMode='passthrough';
+
+function log(msg,kind='info'){
+    const ts=new Date().toLocaleTimeString('en',{hour12:false}),row=document.createElement('div');
+    row.className='entry';
+    row.innerHTML=`<span class="ts">${ts}</span><span class="msg ${kind}">${msg}</span>`;
+    logEl.prepend(row);
+}
+
+function setStatus(text,state='idle'){
+    statusText.textContent=text; dotMic.className='dot';
+    if(state==='active') dotMic.classList.add('active','pulse');
+    if(state==='error')  dotMic.classList.add('error');
+    if(state==='ready')  dotMic.classList.add('active');
+}
+
+btnStart.addEventListener('click',async()=>{
+    try{
+        setStatus('Requesting microphone...');
+        log('Requesting mic access...');
+        stream=await navigator.mediaDevices.getUserMedia({
+            audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}
+        });
+        log('Mic granted','ok');
+
+        audioCtx=new AudioContext({latencyHint:'interactive',sampleRate:48000});
+        log(`AudioContext ready - ${audioCtx.sampleRate}Hz, baseLatency: ${(audioCtx.baseLatency*1000).toFixed(2)}ms`,'ok');
+
+        // Fetch WASM on main thread — worklet thread cannot use fetch()
+        setStatus('Fetching WASM...');
+        log('Fetching  processor.wasm...');
+        const res=await fetch('processor.wasm');
+        if(!res.ok) throw new Error(`WASM fetch failed: ${res.status} ${res.statusText}`);
+        const wasmBytes=await res.arrayBuffer();
+        log(`WASM loaded - ${wasmBytes.byteLength} bytes`,'ok');
+
+        setStatus('Loading worklet...');
+        log('Loading worklet-processor.js...');
+        await audioCtx.audioWorklet.addModule('worklet-processor.js');
+        log('Worklet ready','ok');
+
+        // wasmBytes passed via processorOptions — worklet calls WebAssembly.instantiate() on them
+        workletNode=new AudioWorkletNode(audioCtx,'audio-kernel',{
+            processorOptions:{
+                wasmBytes,
+                mode:currentMode,
+                sampleRate:audioCtx.sampleRate,
+                chunkDuration:parseInt(document.getElementById('chunk-dur').value),
+            },
+            channelCount:1,
+            channelCountMode:'explicit',
+            channelInterpretation:'discrete',
+            numberOfOutputs:1,
+        });
+
+        // This is what a dev using your module would implement
+        workletNode.port.onmessage=(e)=>{
+            if(e.data.type==='chunk'){
+                const samples=new Float32Array(e.data.audio);
+                chunkCount++; chunkEl.textContent=chunkCount;
+                let sum=0;
+                for(let i=0;i<samples.length;i++) sum+=samples[i]*samples[i];
+                const rms=Math.sqrt(sum/samples.length);
+                rmsEl.textContent=rms.toFixed(4);
+                log(`chunk #${chunkCount} - ${samples.length} samples, RMS ${rms.toFixed(4)}`,'ok');
+                // whisper.transcribe(samples) — wire your STT here
+            }
+        };
+
+        analyser=audioCtx.createAnalyser();
+        analyser.fftSize=1024;
+
+        const mic=audioCtx.createMediaStreamSource(stream);
+        mic.connect(workletNode);
+        workletNode.connect(analyser);
+        if(currentMode!=='accumulate') workletNode.connect(audioCtx.destination);
+
+        drawWaveform();
+        setStatus('Pipeline active - WASM processing','active');
+        log('Pipeline online','ok');
+        btnStart.disabled=true; btnStop.disabled=false;
+
+    }catch(err){
+        setStatus(`Error: ${err.message}`,'error');
+        log(err.message,'err');
+        console.error(err);
+    }
+});
+
+btnStop.addEventListener('click', () => {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+
+    if (workletNode) { workletNode.disconnect(); workletNode = null; }
+    if (analyser)    { analyser.disconnect();    analyser = null; }
+
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+    chunkCount = 0;
+    chunkEl.textContent = '0';
+    rmsEl.textContent   = '-';
+
+    setStatus('Stopped', 'idle');
+    log('Pipeline stopped', 'info');
+
+    btnStart.disabled = false;
+    btnStop.disabled  = true;
+
+    const c = document.getElementById('waveform');
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+        currentMode=btn.dataset.mode;
+        if(workletNode){
+            workletNode.port.postMessage({type:'setMode',mode:currentMode,sampleRate:audioCtx.sampleRate,chunkDuration:parseInt(document.getElementById('chunk-dur').value)});
+            try{workletNode.disconnect(audioCtx.destination);}catch(_){}
+            if(currentMode!=='accumulate') workletNode.connect(audioCtx.destination);
+            log(`Mode changed to ${currentMode}`,'ok');
+        } else {
+            log(`Mode set to ${currentMode} (applies on next start)`,'info');
+        }
+    });
+});
+
+document.getElementById('gain').addEventListener('input',(e)=>{
+    const val=parseFloat(e.target.value);
+    document.getElementById('gain-val').textContent=val.toFixed(2);
+    // id:0 maps to gain in C++ set_parameter()
+    if(workletNode) workletNode.port.postMessage({type:'param',id:0,value:val});
+});
+
+document.getElementById('chunk-dur').addEventListener('input',(e)=>{
+    document.getElementById('chunk-dur-val').textContent=e.target.value;
+    if(workletNode) workletNode.port.postMessage({type:'setMode',mode:currentMode,sampleRate:audioCtx.sampleRate,chunkDuration:parseInt(e.target.value)});
+});
+
+function drawWaveform(){
+    const canvas=document.getElementById('waveform'),ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
+    canvas.width=canvas.offsetWidth*dpr; canvas.height=canvas.offsetHeight*dpr;
+    ctx.scale(dpr,dpr);
+    const W=canvas.offsetWidth,H=canvas.offsetHeight,buf=new Float32Array(analyser.fftSize);
+    function draw(){
+        animFrame=requestAnimationFrame(draw);
+        analyser.getFloatTimeDomainData(buf);
+        ctx.clearRect(0,0,W,H);
+        ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+        ctx.strokeStyle='#00ff88'; ctx.lineWidth=1.5; ctx.beginPath();
+        const step=W/buf.length;
+        for(let i=0;i<buf.length;i++){
+            const x=i*step,y=(0.5+buf[i]*0.45)*H;
+            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+    }
+    draw();
+}
+</script>
+</body>
+</html>
