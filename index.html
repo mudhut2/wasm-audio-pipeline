@@ -3,213 +3,294 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AudioKernel — Test Bench</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<title>VoiceKernel — Test</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-        --bg:#0a0a0a; --surface:#111111; --border:#222222;
-        --accent:#00ff88; --accent2:#ff3c6e; --dim:#444;
-        --text:#e8e8e8; --muted:#666;
+        --bg: #0c0c0f; --surface: #13131a; --border: #1e1e2e;
+        --accent: #7efff5; --accent2: #ff6b9d; --dim: #333;
+        --text: #e2e2f0; --muted: #555;
     }
-    body { background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; min-height:100vh; display:grid; grid-template-rows:auto 1fr auto; padding:40px 32px; gap:40px; }
-    header { display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--border); padding-bottom:24px; }
-    h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:2rem; letter-spacing:-0.03em; color:#fff; }
-    .tag { font-size:0.7rem; color:var(--accent); border:1px solid var(--accent); padding:2px 8px; letter-spacing:0.12em; text-transform:uppercase; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-content:start; }
-    .card { background:var(--surface); border:1px solid var(--border); padding:24px; }
-    .card.wide { grid-column:1/-1; }
-    .card-label { font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:20px; }
-    .dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex-shrink:0; transition:background 0.3s; }
-    .dot.active { background:var(--accent); box-shadow:0 0 8px var(--accent); }
-    .dot.error  { background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
-    .dot.pulse  { animation:pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    .status-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    #status-text { font-size:0.8rem; color:var(--muted); }
-    .btn { font-family:'DM Mono',monospace; font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; background:transparent; border:1px solid var(--border); color:var(--text); padding:10px 20px; cursor:pointer; transition:border-color 0.2s,color 0.2s; }
-    .btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
-    .btn.danger:hover { border-color:var(--accent2); color:var(--accent2); }
-    .btn:disabled { opacity:0.3; cursor:not-allowed; }
-    .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
-    .mode-row { display:flex; margin-top:16px; }
-    .mode-btn { font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; background:transparent; border:1px solid var(--border); color:var(--muted); padding:8px 16px; cursor:pointer; transition:all 0.2s; margin-right:-1px; }
-    .mode-btn.selected { background:var(--accent); color:#000; border-color:var(--accent); z-index:1; }
-    .param-row { display:flex; align-items:center; gap:16px; margin-top:16px; }
-    .param-label { font-size:0.7rem; color:var(--muted); width:80px; flex-shrink:0; }
-    input[type=range] { -webkit-appearance:none; flex:1; height:2px; background:var(--border); outline:none; cursor:pointer; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:var(--accent); border-radius:0; cursor:pointer; }
-    .param-value { font-size:0.8rem; color:var(--accent); width:36px; text-align:right; flex-shrink:0; }
-    canvas { width:100%; height:80px; display:block; margin-top:16px; }
-    #log { font-size:0.72rem; line-height:1.8; color:var(--muted); height:160px; overflow-y:auto; margin-top:8px; }
-    #log .entry { display:flex; gap:12px; }
-    #log .ts  { color:var(--dim); flex-shrink:0; }
-    #log .msg.ok   { color:var(--accent); }
-    #log .msg.err  { color:var(--accent2); }
-    #log .msg.info { color:#888; }
-    .big-num { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:var(--accent); line-height:1; }
-    .sub { font-size:0.65rem; color:var(--muted); margin-top:6px; letter-spacing:0.1em; text-transform:uppercase; }
-    footer { border-top:1px solid var(--border); padding-top:16px; font-size:0.65rem; color:var(--dim); }
+    body {
+        background: var(--bg); color: var(--text);
+        font-family: 'DM Mono', monospace;
+        min-height: 100vh; padding: 48px 40px;
+        display: grid; grid-template-rows: auto 1fr; gap: 48px;
+    }
+    header {
+        display: flex; align-items: center; justify-content: space-between;
+        border-bottom: 1px solid var(--border); padding-bottom: 28px;
+    }
+    .logo { display: flex; align-items: baseline; gap: 12px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: #fff; letter-spacing: -0.04em; }
+    .version { font-size: 0.65rem; color: var(--accent); border: 1px solid var(--accent); padding: 2px 8px; letter-spacing: 0.1em; }
+    .status-pill {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); transition: all 0.3s; }
+    .dot.on  { background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: blink 1.4s infinite; }
+    .dot.err { background: var(--accent2); box-shadow: 0 0 10px var(--accent2); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .main { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-content: start; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border); padding: 28px; }
+    .panel-title { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; }
+
+    .col { display: flex; flex-direction: column; gap: 16px; }
+
+    /* buttons */
+    .btn {
+        font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em;
+        text-transform: uppercase; padding: 12px; width: 100%;
+        background: transparent; border: 1px solid var(--border);
+        color: var(--text); cursor: pointer; transition: all 0.2s;
+    }
+    .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn.active { border-color: var(--accent); color: #000; background: var(--accent); }
+    .btn.stop:hover { border-color: var(--accent2); color: var(--accent2); }
+    .btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+    /* mode buttons */
+    .mode-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+    .mode-btn {
+        font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em;
+        text-transform: uppercase; padding: 9px 4px;
+        background: transparent; border: 1px solid var(--border);
+        color: var(--muted); cursor: pointer; transition: all 0.15s;
+        margin-right: -1px;
+    }
+    .mode-btn:hover { color: var(--text); }
+    .mode-btn.selected { background: var(--accent); color: #000; border-color: var(--accent); z-index: 1; }
+
+    /* sliders */
+    .slider-row { display: flex; flex-direction: column; gap: 10px; }
+    .slider-header { display: flex; justify-content: space-between; align-items: baseline; }
+    .slider-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+    .slider-val { font-size: 0.85rem; color: var(--accent); }
+    input[type=range] {
+        -webkit-appearance: none; width: 100%; height: 2px;
+        background: var(--border); outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 14px; height: 14px;
+        background: var(--accent); border-radius: 0; cursor: pointer;
+    }
+
+    /* waveform */
+    canvas { width: 100%; height: 100px; display: block; margin-top: 12px; }
+
+    /* chunk stats */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+    .stat { background: var(--bg); border: 1px solid var(--border); padding: 16px; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-label { font-size: 0.6rem; color: var(--muted); margin-top: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    /* log */
+    .log { height: 180px; overflow-y: auto; margin-top: 12px; }
+    .log-entry { display: flex; gap: 12px; font-size: 0.68rem; line-height: 1.9; border-bottom: 1px solid #111; }
+    .log-ts { color: var(--dim); flex-shrink: 0; }
+    .log-msg { color: #777; }
+    .log-msg.ok  { color: var(--accent); }
+    .log-msg.err { color: var(--accent2); }
+
+    /* code example */
+    pre {
+        background: var(--bg); border: 1px solid var(--border);
+        padding: 16px; font-size: 0.68rem; line-height: 1.8;
+        color: #888; overflow-x: auto; margin-top: 12px;
+    }
+    .kw { color: #c792ea; }
+    .fn { color: var(--accent); }
+    .str { color: #f78c6c; }
+    .cm { color: #444; }
 </style>
 </head>
 <body>
-<header>
-    <h1>AudioKernel</h1>
-    <span class="tag">Test Bench</span>
-</header>
-<main class="grid">
-    <div class="card">
-        <div class="card-label">Pipeline Status</div>
-        <div class="status-row">
-            <div class="dot" id="dot-mic"></div>
-            <span id="status-text">Idle — click Start</span>
-        </div>
-        <div class="btn-row" style="margin-top:20px">
-            <button class="btn" id="btn-start">Start</button>
-            <button class="btn danger" id="btn-stop" disabled>Stop</button>
-        </div>
-        <div style="margin-top:24px" class="card-label">Mode</div>
-        <div class="mode-row">
-            <button class="mode-btn selected" data-mode="passthrough">Passthrough</button>
-            <button class="mode-btn" data-mode="accumulate">Accumulate</button>
-            <button class="mode-btn" data-mode="both">Both</button>
-        </div>
-        <div class="param-row" style="margin-top:24px">
-            <span class="param-label">Gain</span>
-            <input type="range" id="gain" min="0" max="2" step="0.01" value="1">
-            <span class="param-value" id="gain-val">1.00</span>
-        </div>
-    </div>
-    <div class="card">
-        <div class="card-label">Accumulator</div>
-        <div class="big-num" id="chunk-count">0</div>
-        <div class="sub">chunks received</div>
-        <div class="param-row" style="margin-top:24px">
-            <span class="param-label">Chunk ms</span>
-            <input type="range" id="chunk-dur" min="50" max="1000" step="50" value="250">
-            <span class="param-value" id="chunk-dur-val">250</span>
-        </div>
-        <div style="margin-top:16px;font-size:0.7rem;color:var(--muted)">
-            Last chunk RMS: <span id="rms-val" style="color:var(--accent)">-</span>
-        </div>
-    </div>
-    <div class="card wide">
-        <div class="card-label">Output Waveform</div>
-        <canvas id="waveform"></canvas>
-    </div>
-    <div class="card wide">
-        <div class="card-label">Event Log</div>
-        <div id="log"></div>
-    </div>
-</main>
-<footer>Place index.html + audio-kernel.worklet.js + audio-kernel.wasm in one folder, then: npx serve .</footer>
-<script>
-const logEl=document.getElementById('log'),dotMic=document.getElementById('dot-mic'),statusText=document.getElementById('status-text'),btnStart=document.getElementById('btn-start'),btnStop=document.getElementById('btn-stop'),chunkEl=document.getElementById('chunk-count'),rmsEl=document.getElementById('rms-val');
-let audioCtx=null,workletNode=null,analyser=null,stream=null,animFrame=null,chunkCount=0,currentMode='passthrough';
 
-function log(msg,kind='info'){
-    const ts=new Date().toLocaleTimeString('en',{hour12:false}),row=document.createElement('div');
-    row.className='entry';
-    row.innerHTML=`<span class="ts">${ts}</span><span class="msg ${kind}">${msg}</span>`;
+<header>
+    <div class="logo">
+        <h1>VoiceKernel</h1>
+        <span class="version">v0.1</span>
+    </div>
+    <div class="status-pill">
+        <div class="dot" id="dot"></div>
+        <span id="status-text">offline</span>
+    </div>
+</header>
+
+<div class="main">
+
+    <!-- LEFT: controls -->
+    <div class="col">
+        <div class="panel">
+            <div class="panel-title">Controls</div>
+            <div class="col">
+                <button class="btn" id="btn-start">Start</button>
+                <button class="btn stop" id="btn-stop" disabled>Stop</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Mode</div>
+            <div class="mode-group">
+                <button class="mode-btn selected" data-mode="passthrough">Pass</button>
+                <button class="mode-btn" data-mode="accumulate">Accum</button>
+                <button class="mode-btn" data-mode="both">Both</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Parameters</div>
+            <div class="col">
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Gain</span>
+                        <span class="slider-val" id="gain-val">1.00</span>
+                    </div>
+                    <input type="range" id="gain" min="0" max="2" step="0.01" value="1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Chunk ms</span>
+                        <span class="slider-val" id="chunk-val">250</span>
+                    </div>
+                    <input type="range" id="chunk-dur" min="50" max="1000" step="50" value="250">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: visualisation + log -->
+    <div class="col">
+        <div class="panel">
+            <div class="panel-title">Waveform</div>
+            <canvas id="waveform"></canvas>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Accumulator Stats</div>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-val" id="chunk-count">0</div>
+                    <div class="stat-label">Chunks received</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-val" id="rms-val">—</div>
+                    <div class="stat-label">Last RMS</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Event Log</div>
+            <div class="log" id="log"></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Import Example</div>
+            <pre><span class="kw">import</span> VoiceKernel <span class="kw">from</span> <span class="str">'./voice-kernel.js'</span>
+
+<span class="kw">const</span> mic = <span class="kw">await</span> <span class="fn">VoiceKernel.create</span>({
+    mode: <span class="str">'passthrough'</span>,
+    gain: <span class="str">1.0</span>,
+    chunkDuration: <span class="str">250</span>,
+    onChunk: (samples) => {
+        <span class="cm">// feed to STT, save to file, etc.</span>
+        console.<span class="fn">log</span>(samples)
+    }
+})
+
+mic.<span class="fn">setGain</span>(<span class="str">0.5</span>)
+mic.<span class="fn">setMode</span>(<span class="str">'both'</span>)
+mic.<span class="fn">destroy</span>()</pre>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+import VoiceKernel from './voice-kernel.js';
+
+const dot        = document.getElementById('dot');
+const statusText = document.getElementById('status-text');
+const btnStart   = document.getElementById('btn-start');
+const btnStop    = document.getElementById('btn-stop');
+const chunkCount = document.getElementById('chunk-count');
+const rmsEl      = document.getElementById('rms-val');
+const logEl      = document.getElementById('log');
+
+let mic      = null;
+let animFrame = null;
+let chunks   = 0;
+let currentMode = 'passthrough';
+
+function log(msg, kind = 'info') {
+    const ts  = new Date().toLocaleTimeString('en', { hour12: false });
+    const row = document.createElement('div');
+    row.className = 'log-entry';
+    row.innerHTML = `<span class="log-ts">${ts}</span><span class="log-msg ${kind}">${msg}</span>`;
     logEl.prepend(row);
 }
 
-function setStatus(text,state='idle'){
-    statusText.textContent=text; dotMic.className='dot';
-    if(state==='active') dotMic.classList.add('active','pulse');
-    if(state==='error')  dotMic.classList.add('error');
-    if(state==='ready')  dotMic.classList.add('active');
+function setStatus(text, state = 'idle') {
+    statusText.textContent = text;
+    dot.className = 'dot';
+    if (state === 'on')  dot.classList.add('on');
+    if (state === 'err') dot.classList.add('err');
 }
 
-btnStart.addEventListener('click',async()=>{
-    try{
-        setStatus('Requesting microphone...');
-        log('Requesting mic access...');
-        stream=await navigator.mediaDevices.getUserMedia({
-            audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}
-        });
-        log('Mic granted','ok');
+// ── Start ──────────────────────────────────────────────────────────────────
+btnStart.addEventListener('click', async () => {
+    try {
+        setStatus('initialising...', 'idle');
+        log('Creating VoiceKernel...');
 
-        audioCtx=new AudioContext({latencyHint:'interactive',sampleRate:48000});
-        log(`AudioContext ready - ${audioCtx.sampleRate}Hz, baseLatency: ${(audioCtx.baseLatency*1000).toFixed(2)}ms`,'ok');
+        mic = await VoiceKernel.create({
+            mode:          currentMode,
+            gain:          parseFloat(document.getElementById('gain').value),
+            chunkDuration: parseInt(document.getElementById('chunk-dur').value),
+            onChunk: (samples) => {
+                chunks++;
+                chunkCount.textContent = chunks;
 
-        // Fetch WASM on main thread — worklet thread cannot use fetch()
-        setStatus('Fetching WASM...');
-        log('Fetching  processor.wasm...');
-        const res=await fetch('processor.wasm');
-        if(!res.ok) throw new Error(`WASM fetch failed: ${res.status} ${res.statusText}`);
-        const wasmBytes=await res.arrayBuffer();
-        log(`WASM loaded - ${wasmBytes.byteLength} bytes`,'ok');
+                let sum = 0;
+                for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+                rmsEl.textContent = Math.sqrt(sum / samples.length).toFixed(4);
 
-        setStatus('Loading worklet...');
-        log('Loading worklet-processor.js...');
-        await audioCtx.audioWorklet.addModule('worklet-processor.js');
-        log('Worklet ready','ok');
-
-        // wasmBytes passed via processorOptions — worklet calls WebAssembly.instantiate() on them
-        workletNode=new AudioWorkletNode(audioCtx,'audio-kernel',{
-            processorOptions:{
-                wasmBytes,
-                mode:currentMode,
-                sampleRate:audioCtx.sampleRate,
-                chunkDuration:parseInt(document.getElementById('chunk-dur').value),
-            },
-            channelCount:1,
-            channelCountMode:'explicit',
-            channelInterpretation:'discrete',
-            numberOfOutputs:1,
-        });
-
-        // This is what a dev using your module would implement
-        workletNode.port.onmessage=(e)=>{
-            if(e.data.type==='chunk'){
-                const samples=new Float32Array(e.data.audio);
-                chunkCount++; chunkEl.textContent=chunkCount;
-                let sum=0;
-                for(let i=0;i<samples.length;i++) sum+=samples[i]*samples[i];
-                const rms=Math.sqrt(sum/samples.length);
-                rmsEl.textContent=rms.toFixed(4);
-                log(`chunk #${chunkCount} - ${samples.length} samples, RMS ${rms.toFixed(4)}`,'ok');
-                // whisper.transcribe(samples) — wire your STT here
+                log(`chunk #${chunks} — ${samples.length} samples, RMS ${rmsEl.textContent}`, 'ok');
             }
-        };
+        });
 
-        analyser=audioCtx.createAnalyser();
-        analyser.fftSize=1024;
+        log('VoiceKernel ready', 'ok');
+        setStatus('active', 'on');
 
-        const mic=audioCtx.createMediaStreamSource(stream);
-        mic.connect(workletNode);
-        workletNode.connect(analyser);
-        if(currentMode!=='accumulate') workletNode.connect(audioCtx.destination);
+        // wire analyser for waveform
+        drawWaveform(mic.getAnalyser());
 
-        drawWaveform();
-        setStatus('Pipeline active - WASM processing','active');
-        log('Pipeline online','ok');
-        btnStart.disabled=true; btnStop.disabled=false;
+        btnStart.disabled = true;
+        btnStop.disabled  = false;
 
-    }catch(err){
-        setStatus(`Error: ${err.message}`,'error');
-        log(err.message,'err');
+    } catch (err) {
+        setStatus('error', 'err');
+        log(err.message, 'err');
         console.error(err);
     }
 });
 
+// ── Stop ───────────────────────────────────────────────────────────────────
 btnStop.addEventListener('click', () => {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    if (mic) { mic.destroy(); mic = null; }
 
-    if (workletNode) { workletNode.disconnect(); workletNode = null; }
-    if (analyser)    { analyser.disconnect();    analyser = null; }
+    chunks = 0;
+    chunkCount.textContent = '0';
+    rmsEl.textContent      = '—';
 
-    if (audioCtx) { audioCtx.close(); audioCtx = null; }
-
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-
-    chunkCount = 0;
-    chunkEl.textContent = '0';
-    rmsEl.textContent   = '-';
-
-    setStatus('Stopped', 'idle');
-    log('Pipeline stopped', 'info');
+    setStatus('offline', 'idle');
+    log('VoiceKernel destroyed', 'info');
 
     btnStart.disabled = false;
     btnStop.disabled  = true;
@@ -218,53 +299,70 @@ btnStop.addEventListener('click', () => {
     c.getContext('2d').clearRect(0, 0, c.width, c.height);
 });
 
-document.querySelectorAll('.mode-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-        document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
+// ── Mode ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        currentMode=btn.dataset.mode;
-        if(workletNode){
-            workletNode.port.postMessage({type:'setMode',mode:currentMode,sampleRate:audioCtx.sampleRate,chunkDuration:parseInt(document.getElementById('chunk-dur').value)});
-            try{workletNode.disconnect(audioCtx.destination);}catch(_){}
-            if(currentMode!=='accumulate') workletNode.connect(audioCtx.destination);
-            log(`Mode changed to ${currentMode}`,'ok');
+        currentMode = btn.dataset.mode;
+
+        if (mic) {
+            mic.setMode(currentMode, parseInt(document.getElementById('chunk-dur').value));
+            log(`mode → ${currentMode}`, 'ok');
         } else {
-            log(`Mode set to ${currentMode} (applies on next start)`,'info');
+            log(`mode set to ${currentMode} (applies on next start)`, 'info');
         }
     });
 });
 
-document.getElementById('gain').addEventListener('input',(e)=>{
-    const val=parseFloat(e.target.value);
-    document.getElementById('gain-val').textContent=val.toFixed(2);
-    // id:0 maps to gain in C++ set_parameter()
-    if(workletNode) workletNode.port.postMessage({type:'param',id:0,value:val});
+// ── Gain ───────────────────────────────────────────────────────────────────
+document.getElementById('gain').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById('gain-val').textContent = val.toFixed(2);
+    if (mic) mic.setGain(val);
 });
 
-document.getElementById('chunk-dur').addEventListener('input',(e)=>{
-    document.getElementById('chunk-dur-val').textContent=e.target.value;
-    if(workletNode) workletNode.port.postMessage({type:'setMode',mode:currentMode,sampleRate:audioCtx.sampleRate,chunkDuration:parseInt(e.target.value)});
+// ── Chunk duration ─────────────────────────────────────────────────────────
+document.getElementById('chunk-dur').addEventListener('input', (e) => {
+    document.getElementById('chunk-val').textContent = e.target.value;
+    if (mic) mic.setMode(currentMode, parseInt(e.target.value));
 });
 
-function drawWaveform(){
-    const canvas=document.getElementById('waveform'),ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
-    canvas.width=canvas.offsetWidth*dpr; canvas.height=canvas.offsetHeight*dpr;
-    ctx.scale(dpr,dpr);
-    const W=canvas.offsetWidth,H=canvas.offsetHeight,buf=new Float32Array(analyser.fftSize);
-    function draw(){
-        animFrame=requestAnimationFrame(draw);
+// ── Waveform ───────────────────────────────────────────────────────────────
+function drawWaveform(analyser) {
+    const canvas = document.getElementById('waveform');
+    const ctx    = canvas.getContext('2d');
+    const dpr    = window.devicePixelRatio || 1;
+
+    canvas.width  = canvas.offsetWidth  * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W   = canvas.offsetWidth;
+    const H   = canvas.offsetHeight;
+    const buf = new Float32Array(analyser.fftSize);
+
+    function draw() {
+        animFrame = requestAnimationFrame(draw);
         analyser.getFloatTimeDomainData(buf);
-        ctx.clearRect(0,0,W,H);
-        ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
-        ctx.strokeStyle='#00ff88'; ctx.lineWidth=1.5; ctx.beginPath();
-        const step=W/buf.length;
-        for(let i=0;i<buf.length;i++){
-            const x=i*step,y=(0.5+buf[i]*0.45)*H;
-            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        ctx.clearRect(0, 0, W, H);
+
+        ctx.strokeStyle = '#1a1a2e';
+        ctx.lineWidth   = 1;
+        ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+
+        ctx.strokeStyle = '#7efff5';
+        ctx.lineWidth   = 1.5;
+        ctx.beginPath();
+        const step = W / buf.length;
+        for (let i = 0; i < buf.length; i++) {
+            const x = i * step;
+            const y = (0.5 + buf[i] * 0.45) * H;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
     }
+
     draw();
 }
 </script>
