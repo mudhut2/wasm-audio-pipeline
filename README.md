@@ -8,6 +8,8 @@ Ensure the following files are located in your project directory:
 
     Supporting Emscripten .wasm and .worker.js files
 
+    (all files in /dist)
+
 Due to browser security policies, VoiceKernel requires an HTTPS connection (or localhost) and a user interaction (like a click) to initialize the AudioContext.
 
 -- Basic Usage --
